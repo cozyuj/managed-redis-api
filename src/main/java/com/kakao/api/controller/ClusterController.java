@@ -1,0 +1,33 @@
+package com.kakao.api.controller;
+
+import com.kakao.api.dto.ClusterReq;
+import com.kakao.api.dto.ClusterRes;
+import com.kakao.api.dto.ManagedRedis;
+import com.kakao.api.service.RedisClusterService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/v1/clusters")
+public class ClusterController {
+
+    private final RedisClusterService redisService;
+
+    @PostMapping
+    public ResponseEntity<?> createCluster(@RequestBody ClusterReq req){
+        try {
+            ManagedRedis redis = redisService.createRedisCluster(req);
+            return ResponseEntity.ok(redis);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCluster(@PathVariable String id){
+        ClusterRes res = redisService.getClusterDetail(id);
+        return ResponseEntity.ok(res);
+    }
+}

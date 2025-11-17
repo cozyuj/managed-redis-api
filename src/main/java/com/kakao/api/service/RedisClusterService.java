@@ -22,6 +22,34 @@ public class RedisClusterService {
 
     private final Map<String, Map<String, Object>> clusterStatusMap = new ConcurrentHashMap<>();
 
+    public ManagedRedis updateClusterScale(String id, Integer replicas) {
+        ManagedRedis redis = kubernetesClient.resources(ManagedRedis.class)
+                .inAnyNamespace()
+                .list()
+                .getItems()
+                .stream()
+                .filter(cr -> cr.getMetadata().getName().equals(id))
+                .findFirst()
+                .orElse(null);
+
+        if (redis == null) {
+            log.warn("Could not find any cluster scale for id {}", id);
+            throw new RuntimeException("Cluster not found: " + id);
+        }
+
+        String namespace = redis.getMetadata().getNamespace();
+
+        redis.getSpec().setReplicas(replicas);
+
+        ManagedRedis updated = kubernetesClient.resources(ManagedRedis.class)
+                .inNamespace(namespace)
+                .withName(id)
+                .replace(redis);
+
+        return updated;
+
+    }
+
     // TODO: 조회 로직 수정
     public ClusterRes getClusterDetail(String uid) {
         log.info("Fetching Redis Cluster by UID: {}", uid);

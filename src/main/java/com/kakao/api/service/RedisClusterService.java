@@ -51,30 +51,28 @@ public class RedisClusterService {
 
     }
 
-    // TODO: 조회 로직 수정
-    public ClusterRes getClusterDetail(String uid) {
-        log.info("Fetching Redis Cluster by UID: {}", uid);
+    public ClusterRes getClusterDetail(String id) {
+        log.info("Fetching Redis Cluster by name: {}", id);
 
-        // 1. UID 기준으로 CR 검색 (UID 직접 조회는 불가 → 전체 조회 후 필터)
+        // 1. name 기준으로 CR 검색
         ManagedRedis target = kubernetesClient.resources(ManagedRedis.class)
                 .inAnyNamespace()
                 .list()
                 .getItems()
                 .stream()
-                .filter(cr -> cr.getMetadata().getUid().equals(uid))
+                .filter(cr -> cr.getMetadata().getName().equals(id))
                 .findFirst()
                 .orElse(null);
 
         if (target == null) {
-            log.warn("Cluster with UID {} not found", uid);
+            log.warn("Cluster with name {} not found", id);
             return null;
         }
 
         String namespace = target.getMetadata().getNamespace();
-        String name = target.getMetadata().getName();
 
         ClusterRes res = new ClusterRes();
-        res.setName(name);
+        res.setName(id);
         res.setNamespace(namespace);
         res.setVersion(target.getSpec().getVersion());
         res.setMode(target.getSpec().getMode());
@@ -84,7 +82,7 @@ public class RedisClusterService {
         // 2. Pod 조회 (app: clusterName)
         List<Pod> pods = kubernetesClient.pods()
                 .inNamespace(namespace)
-                .withLabel("app", name)
+                .withLabel("app", id)
                 .list()
                 .getItems();
 
@@ -121,11 +119,11 @@ public class RedisClusterService {
         // 3. Service 조회 → ConnectionInfo 세팅
         var svc = kubernetesClient.services()
                 .inNamespace(namespace)
-                .withName(name)
+                .withName(id)
                 .get();
 
         if (svc != null && svc.getSpec().getPorts() != null && !svc.getSpec().getPorts().isEmpty()) {
-            String host = name + "." + namespace + ".svc.cluster.local";
+            String host = id + "." + namespace + ".svc.cluster.local";
             int port = svc.getSpec().getPorts().get(0).getPort();
 
             res.setConnection(

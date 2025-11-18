@@ -20,6 +20,13 @@ public class ClusterController {
 
     private final RedisClusterService redisService;
 
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletedCluster(@PathVariable String id) {
+        redisService.deleteCluster(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateClusterScale(@PathVariable String id,
                                            @RequestBody ClusterScaleReq req){

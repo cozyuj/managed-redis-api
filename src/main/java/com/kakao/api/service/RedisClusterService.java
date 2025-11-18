@@ -5,6 +5,7 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -172,4 +173,32 @@ public class RedisClusterService {
         return newRedis;
     }
 
+    public void deleteCluster(String id) {
+        ManagedRedis target = kubernetesClient.resources(ManagedRedis.class)
+                .inAnyNamespace()
+                .list()
+                .getItems()
+                .stream()
+                .filter(cr -> id.equals(cr.getMetadata().getName()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Not found"));
+
+        String namespace = target.getMetadata().getNamespace();
+
+        ManagedRedis cr = kubernetesClient.resources(ManagedRedis.class)
+                .inNamespace(namespace)
+                .withName(id)
+                .get();
+
+        if (cr == null) {
+            log.warn("Deleting non-existing Redis cluster: {}", id);
+            throw new ResourceNotFoundException("Cluster name [" + id + "] is not found");
+        }
+
+        kubernetesClient.resources(ManagedRedis.class)
+                .inNamespace(namespace)
+                .withName(id)
+                .delete();
+
+    }
 }
